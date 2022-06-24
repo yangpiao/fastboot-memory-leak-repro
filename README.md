@@ -1,57 +1,25 @@
-# ssr-memory-leak-repro
+# Memory Leak Repro
 
-This README outlines the details of collaborating on this Ember application.
-A short introduction of this app could easily go here.
+## The Memory Leak
 
-## Prerequisites
+In a Fastboot SSR app, if there's an uncaught exception when a component is rendered on server side (e.g. error in the constructor or a getter), the `CURRENT_TRACKER` in `@glimmer/validator` will not be cleaned up / de-referenced properly. It won't be collected by GC and will keep consuming the `Tag`s from subsequent rendering. It'll keep growing until the process is killed because of OOM.
 
-You will need the following things properly installed on your computer.
+The steps to reproduce are below. I tried using Ember LTS (3.28) and latest (4.5). The issue exists in both versions.
 
-* [Git](https://git-scm.com/)
-* [Node.js](https://nodejs.org/)
-* [Yarn](https://yarnpkg.com/)
-* [Ember CLI](https://cli.emberjs.com/release/)
-* [Google Chrome](https://google.com/chrome/)
+## Steps To Reproduce
 
-## Installation
+1. `yarn install`.
+2. Start the server with prod build and Node debugger: `node --inspect ./node_modules/.bin/ember s --environment=production`. Dev build doesn't seem to have the same issue.
+3. Visit http://localhost:4200.
+4. Open Chrome DevTools for Node.js.
+5. Take a heap snapshot.
+   - Search for `Tracker` in the "Class filter" input. You won't find any `Tracker` in the snapshot.
+6. Visit http://localhost:4200/leak in anonther browser tab, or click the link on the page and *refresh the page*. The route has to be loaded and rendered on server side in Fastboot.
+7. Visit http://localhost:4200/no-leak and refresh the page. You can refresh a few more times so the leak is a bit more obvious (I refreshed about 10 times before taking the snapshot in the screenshot below). You might not be able to tell there's a leak from the heap size itself, because this website is too simple.
+8. Take another heap snapshot.
+   - Search for `Tracker` in the "Class filter" input. You'll find some `Tracker` objects retained. Click on the one with the largest "retained size", and you'll find that is `CURRENT_TRACKER` in `@glimmer/validator`.
 
-* `git clone <repository-url>` this repository
-* `cd ssr-memory-leak-repro`
-* `yarn install`
+## Screenshot Of A Snapshot
 
-## Running / Development
+![heap snapshot](./heap.png)
 
-* `ember serve`
-* Visit your app at [http://localhost:4200](http://localhost:4200).
-* Visit your tests at [http://localhost:4200/tests](http://localhost:4200/tests).
-
-### Code Generators
-
-Make use of the many generators for code, try `ember help generate` for more details
-
-### Running Tests
-
-* `ember test`
-* `ember test --server`
-
-### Linting
-
-* `yarn lint`
-* `yarn lint:fix`
-
-### Building
-
-* `ember build` (development)
-* `ember build --environment production` (production)
-
-### Deploying
-
-Specify what it takes to deploy your app.
-
-## Further Reading / Useful Links
-
-* [ember.js](https://emberjs.com/)
-* [ember-cli](https://cli.emberjs.com/release/)
-* Development Browser Extensions
-  * [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
-  * [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
