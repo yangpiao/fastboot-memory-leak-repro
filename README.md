@@ -4,7 +4,7 @@
 
 In a Fastboot SSR app, if there's an uncaught exception when a component is rendered on server side (e.g. error in the constructor or a getter), the `CURRENT_TRACKER` in `@glimmer/validator` will not be cleaned up / de-referenced properly. As a result, it won't be collected by GC and will keep consuming the `Tag`s from subsequent rendering. It'll keep growing until the process is killed because of OOM.
 
-The steps to reproduce are below. I tried using Ember LTS (3.28) and latest (4.5). The issue exists in both versions.
+I tried using Ember LTS (3.28) and latest (4.5). The issue exists in both versions.
 
 ## Steps To Reproduce
 
